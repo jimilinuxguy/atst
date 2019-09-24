@@ -442,3 +442,76 @@ class MockCloudProvider(CloudProviderInterface):
         self._delay(1, 5)
         if credentials != self._auth_credentials:
             raise self.AUTHENTICATION_EXCEPTION
+
+
+# Suspect this would change if rewarded
+AZURE_ENVIRONMENT = "AZURE_PUBLIC_CLOUD"
+SUBSCRIPTION_ID_REGEX = re.compile(
+    "subscriptions\/([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})",
+    re.I,
+)
+
+
+class AzureCloudProvider(CloudProviderInterface):
+    def __init__(self, config):
+        self.config = config
+
+        self.client_id = config["AZURE_CLIENT_ID"]
+        self.secret_key = config["AZURE_SECRET_KEY"]
+        self.tenant_id = config["AZURE_TENANT_ID"]
+
+        import azure.mgmt as mgmt
+        import azure.common.credentials as credentials
+
+        self.azure_mgmt = mgmt
+        self.azure_credentials = credentials
+
+    def root_creds(self):
+        return {
+            "client_id": self.client_id,
+            "secret_key": self.secret_key,
+            "tenant_id": self.tenant_id,
+        }
+
+    def create_environment(
+        self, auth_credentials: Dict, user: User, environment: Environment
+    ):
+        credentials = self.get_client(self.root_creds())
+        sub_client = self.azure_mgmt.subscription.SubscriptionClient(credentials)
+
+        display_name = (
+            f"{environment.application.name}_{environment.name}_{environment.id}"
+        )  # proposed format
+
+        billing_profile_id = "?"  # something chained from environment?
+        sku_id = "?"  # probably a static sku specific to ATAT/JEDI
+        body = self.azure_mgmt.subscription.models.ModernSubscriptionCreationParameters(
+            display_name, billing_profile_id, sku_id
+        )
+
+        billing_account_name = "?"  # something chained from environment?
+        invoice_section_name = "?"  # something chained from environment?
+        sub_creation_operation = sub_client.subscription_factory.create_subscription(
+            billing_account_name, invoice_section_name, body
+        )
+
+        # the resulting object from this process is a link to the new subscription
+        # not a subscription model, so we'll have to unpack the ID
+        new_sub = sub_creation_operation.result()
+
+        sub_id_match = SUBSCRIPTION_ID_REGEX.match(new_sub.subscription_link)
+
+        if sub_id_match:
+            return sub_id_match.group(1)
+        else:
+            # troublesome error, subscription shoudl exist at this point, but we just don't have a valid ID
+            pass
+
+    def _get_client(self, creds):
+        return self.azure_credentials.ServicePrincipalCredentials(
+            client_id=creds.get("client_id"),
+            secret=creds.get("secret_key"),
+            tenant=creds.get("tenant_id"),
+            cloud_environment=AZURE_ENVIRONMENT,
+        )
+

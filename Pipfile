@@ -26,6 +26,7 @@ azure-storage = "*"
 azure-storage-common = "*"
 boto3 = "*"
 celery = "*"
+azure-mgmt-subscription = "*"
 
 [dev-packages]
 bandit = "*"
