@@ -1,4 +1,5 @@
 from typing import Dict
+import re
 from uuid import uuid4
 
 from atst.models.environment_role import CSPRole
@@ -461,13 +462,16 @@ class AzureCloudProvider(CloudProviderInterface):
         self.secret_key = config["AZURE_SECRET_KEY"]
         self.tenant_id = config["AZURE_TENANT_ID"]
 
-        import azure.mgmt as mgmt
+        from azure.mgmt import subscription
         import azure.graphrbac as graphrbac
         import azure.common.credentials as credentials
+        from msrestazure.azure_cloud import AZURE_PUBLIC_CLOUD
 
-        self.azure_mgmt = mgmt
+        self.azure_subscription = subscription
         self.azure_graph = graphrbac
         self.azure_credentials = credentials
+        # may change to a JEDI cloud
+        self.azure_cloud = AZURE_PUBLIC_CLOUD
 
     def root_creds(self):
         return {
@@ -488,14 +492,20 @@ class AzureCloudProvider(CloudProviderInterface):
 
         billing_profile_id = "?"  # something chained from environment?
         sku_id = AZURE_SKU_ID
+        # we want to set AT-AT as an owner here
+        # we could potentially associate subscriptions with "management groups" per DOD component
         body = self.azure_mgmt.subscription.models.ModernSubscriptionCreationParameters(
-            display_name, billing_profile_id, sku_id
+            display_name,
+            billing_profile_id,
+            sku_id,
+            # owner=<AdPrincipal: for AT-AT user>
         )
 
         # These 2 seem like something that might be worthwhile to allow tiebacks to
         # TOs filed for the environment
         billing_account_name = "?"
         invoice_section_name = "?"
+        # We may also want to create billing sections in the enrollment account
         sub_creation_operation = sub_client.subscription_factory.create_subscription(
             billing_account_name, invoice_section_name, body
         )
@@ -516,17 +526,34 @@ class AzureCloudProvider(CloudProviderInterface):
         self, auth_credentials: Dict, csp_environment_id: str
     ) -> Dict:
         root_creds = self.root_creds()
-        credentials = self._get_credential_obj(root_creds)
+        credentials = self._get_credential_obj(
+            root_creds, resource="https://management.azure.com"
+        )
 
-        sub_client = self.azure_mgmt.subscription.SubscriptionClient(credentials)
-        subscription: self.azure_mgmt.subscription.models.Subscription = sub_client.subscriptions.get(
+        sub_client = self.azure_subscription.SubscriptionClient(credentials)
+        subscription: self.azure_subscription.models.Subscription = sub_client.subscriptions.get(
             csp_environment_id
         )
+
+        from azure.common.credentials import ServicePrincipalCredentials
+
+        graph_creds = ServicePrincipalCredentials(
+            client_id=self.client_id,
+            secret=self.secret_key,
+            tenant=self.tenant_id,
+            cloud_environment=self.azure_cloud,
+            # we really should be using graph.microsoft.com, but i'm getting
+            # "expired token" errors for that
+            # resource = "https://graph.microsoft.com"
+            resource="https://graph.windows.net",
+        )
+        # I needed to set permissions for the graph.windows.net API before I
+        # could get this to work.
 
         # how do we scope the graph client to the new subscription rather than
         # the cloud0 subscription? tenant id seems to be separate from subscription id
         graph_client = self.azure_graph.GraphRbacManagementClient(
-            credentials, root_creds.get("tenant_id")
+            graph_creds, root_creds.get("tenant_id")
         )
 
         # assuming the graph_client is scoped to the new subscription, create an application
@@ -534,6 +561,12 @@ class AzureCloudProvider(CloudProviderInterface):
         app_create_param = self.azure_graph.models.ApplicationCreateParameters(
             display_name=app_display_name
         )
+
+        # we need the appropriate perms here:
+        # https://docs.microsoft.com/en-us/graph/api/application-post-applications?view=graph-rest-beta&tabs=http
+        # https://docs.microsoft.com/en-us/graph/permissions-reference#microsoft-graph-permission-names
+        # set app perms in app registration portal
+        # https://docs.microsoft.com/en-us/graph/auth-v2-service#2-configure-permissions-for-microsoft-graph
         app: self.azure_graph.models.Application = graph_client.applications.create(
             app_create_param
         )
@@ -564,6 +597,5 @@ class AzureCloudProvider(CloudProviderInterface):
             secret=creds.get("secret_key"),
             tenant=creds.get("tenant_id"),
             resource=resource,
-            cloud_environment=AZURE_ENVIRONMENT,
+            cloud_environment=self.azure_cloud,
         )
-

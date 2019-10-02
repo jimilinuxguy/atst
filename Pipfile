@@ -28,6 +28,7 @@ boto3 = "*"
 celery = "*"
 azure-mgmt-subscription = "*"
 azure-graphrbac = "*"
+mrestazure = "*"
 
 [dev-packages]
 bandit = "*"
