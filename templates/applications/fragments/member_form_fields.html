@@ -3,7 +3,8 @@
 {% from "components/phone_input.html" import PhoneInput %}
 
 {% macro PermsFields(form, new=False, member_role_id=None) %}
-  <h4>{{ "portfolios.applications.members.form.project_perms" | translate }}</h4>
+  <h3>{{ "portfolios.applications.members.form.app_perms" | translate }}</h3>
+  <p>{{ "portfolios.applications.members.form.app_perms_text" | translate }}</p>
   <div class="application-perms">
     {% if new %}
       {% set team_mgmt = form.perms_team_mgmt.name %}

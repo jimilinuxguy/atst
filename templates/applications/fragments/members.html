@@ -35,7 +35,7 @@
         {% set modal_name = "edit_member-{}".format(loop.index) %}
         {% call Modal(modal_name, classes="form-content--app-mem") %}
           <div class="modal__form--header">
-            <h1>{{ Icon('avatar') }} {{ member.user_name }}</h1>
+            <h1>{{ Icon('avatar') }} {{ "portfolios.applications.members.form.edit_access_header" | translate({ "user": member.user_name }) }}</h1>
             <hr>
           </div>
           <base-form inline-template>

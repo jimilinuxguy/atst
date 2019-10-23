@@ -401,9 +401,12 @@ portfolios:
         del_env:
           label: Delete Application
           description: Delete this application.
-        env_access: Environment Access
+        edit_access_header: "Manage {user}'s Access"
+        env_access: Environment Roles
+        env_access_text: "Add or revoke Environment access. Additional controls are available in the CSP console."
         next_button: "Next: Permissions"
-        project_perms: Project Permissions
+        app_perms: Application Permissions
+        app_perms_text: Application permissions allow users to provision and modify applications and teams.
         step_2_title: Set Permissions and Roles
         add_member: Add Member
       new:
