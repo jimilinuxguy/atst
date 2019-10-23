@@ -1,6 +1,7 @@
 import pytest
 
 from atst.domain.environment_roles import EnvironmentRoles
+from atst.models.environment_role import EnvironmentRole
 
 from tests.factories import *
 
@@ -49,10 +50,12 @@ def test_get_by_user_and_environment(application_role, environment):
 
 
 def test_delete(application_role, environment, monkeypatch):
-    EnvironmentRoleFactory.create(
+    env_role = EnvironmentRoleFactory.create(
         application_role=application_role, environment=environment
     )
     assert EnvironmentRoles.delete(application_role.id, environment.id)
+    assert env_role.status == EnvironmentRole.Status.PENDING_DELETE
+    assert env_role.deleted
     assert not EnvironmentRoles.delete(application_role.id, environment.id)
 
 

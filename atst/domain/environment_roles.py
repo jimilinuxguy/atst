@@ -57,12 +57,21 @@ class EnvironmentRoles(object):
         return existing_env_role
 
     @classmethod
+    def _update_status(cls, environment_role, new_status):
+        environment_role.status = new_status
+        db.session.add(environment_role)
+        db.session.commit()
+
+        return environment_role
+
+    @classmethod
     def delete(cls, application_role_id, environment_id):
         existing_env_role = EnvironmentRoles.get(application_role_id, environment_id)
 
         if existing_env_role:
             # TODO: Implement suspension
             existing_env_role.deleted = True
+            cls._update_status(existing_env_role, EnvironmentRole.Status.PENDING_DELETE)
             db.session.add(existing_env_role)
             db.session.commit()
             return True
