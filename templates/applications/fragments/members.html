@@ -131,7 +131,7 @@
                         {% set revoke_invite_modal = "revoke_invite_{}".format(member.role_id) %}
                         {% set resend_invite_modal = "resend_invite-{}".format(member.role_id) %}
                         <a v-on:click='openModal("{{ resend_invite_modal }}")'>Resend Invite</a><br>
-                        {% if user_can_delete_app_member -%}
+                        {% if user_can(DELETE_APPLICATION_MEMBER) -%}
                           <a v-on:click='openModal("{{ revoke_invite_modal }}")'>{{ 'invites.revoke' | translate }}</a>
                         {%- endif %}
                       {%- endif %}

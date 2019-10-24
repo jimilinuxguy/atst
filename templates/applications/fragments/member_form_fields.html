@@ -2,6 +2,72 @@
 {% from "components/text_input.html" import TextInput %}
 {% from "components/phone_input.html" import PhoneInput %}
 
+{% macro EnvRoleInput(field, member_role_id=None) %}
+  {% if field.role.data == "No Access" and not field.deleted.data -%}
+    <optionsinput inline-template
+      v-bind:initial-value="'{{ field.role.data | string }}'"
+      v-bind:name="'{{ field.name | string }}{% if member_role_id %}-{{ member_role_id }}{% endif %}'"
+      v-bind:optional="true"
+      v-bind:watch="true">
+      <div class="usa-input">
+        <fieldset data-ally-disabled="true" v-on:change="onInput" class="usa-input__choices">
+          <div class="form-row">
+            <div class="form-col form-col--two-thirds">
+              <legend>
+                <div v-bind:class='["usa-input__title-inline", {"environment-name--gray": value === "None" }]'>
+                  {{ field.environment_name.data }}
+                </div>
+                <p class="usa-input__help">
+                  {{ field.role.data }}
+                </p>
+              </legend>
+            </div>
+            <div class="form-col form-col--third">
+              {{ field.role(**{"v-model": "value", "id": "{}-{}".format(field.role.name, member_role_id)}) }}
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </optionsinput>
+  {% elif field.role.data != "No Access" and not field.deleted.data -%}
+    <div class="form-row">
+      <div class="form-col form-col--two-thirds">
+        <legend>
+          <div v-bind:class='["usa-input__title-inline", {"environment-name--gray": value === "None" }]'>
+            {{ field.environment_name.data }}
+          </div>
+          <p class="usa-input__help">
+            {{ field.role.data }}
+          </p>
+        </legend>
+      </div>
+      <div class="form-col form-col--third">
+        <checkboxinput
+          name="'{{ field.deleted.name | string }}-{% if member_role_id %}-{{ member_role_id }}{% endif %}'"
+          inline-template
+          key="'{{ field.deleted.name | string }}-{% if member_role_id %}-{{ member_role_id }}{% endif %}'"
+          v-bind:initial-checked='{{ field.deleted.data|string|lower }}'
+          v-bind:optional="true"
+          >
+          <div>
+            <div class='usa-input' v-bind:class="[{ 'checked': isChecked }]">
+
+              <fieldset data-ally-disabled="true" v-on:change="onInput" class="usa-input__choices {% if inline %}usa-input__choices--inline{% endif %}">
+                <legend>
+                  {% set id = "{}-{}".format(field.deleted.name, member_role_id) %}
+                  {{ field.deleted(id=id, checked=True, **{"v-model": "isChecked"}) }}
+                  {{ field.deleted.label(for=id) | safe }}
+                </legend>
+              </fieldset>
+            </div>
+          </div>
+        </checkboxinput>
+      </div>
+    </div>
+  {%- endif %}
+  {{ field.environment_id() }}
+{% endmacro %}
+
 {% macro PermsFields(form, new=False, member_role_id=None) %}
   <h3>{{ "portfolios.applications.members.form.app_perms" | translate }}</h3>
   <p>{{ "portfolios.applications.members.form.app_perms_text" | translate }}</p>
@@ -20,33 +86,13 @@
     {{ CheckboxInput(form.perms_env_mgmt, classes="input__inline-fields", key=env_mgmt, id=env_mgmt, optional=True) }}
     {{ CheckboxInput(form.perms_del_env, classes="input__inline-fields", key=del_env, id=del_env, optional=True) }}
   </div>
+  <hr>
   <div class="environment_roles environment-roles-new">
-    <h4>{{ "portfolios.applications.members.form.env_access" | translate }}</h4>
+    <h3>{{ "portfolios.applications.members.form.env_access" | translate }}</h3>
+    <p>{{ "portfolios.applications.members.form.env_access_text" | translate }}</p>
     <hr>
     {% for environment_data in form.environment_roles %}
-      <optionsinput inline-template
-        v-bind:initial-value="'{{ environment_data.role.data | string }}'"
-        v-bind:name="'{{ environment_data.name | string }}'"
-        v-bind:optional="true"
-        v-bind:watch="true">
-        <div class="usa-input">
-          <fieldset data-ally-disabled="true" v-on:change="onInput" class="usa-input__choices">
-            <div class="form-row">
-              <div class="form-col form-col--two-thirds">
-                <legend>
-                  <div v-bind:class='["usa-input__title-inline", {"environment-name--gray": value === "None" }]'>
-                    {{ environment_data.environment_name.data }}
-                  </div>
-                </legend>
-              </div>
-              <div class="form-col form-col--third">
-                {{ environment_data.role(**{"v-model": "value"}) }}
-              </div>
-            </div>
-          </fieldset>
-        </div>
-      </optionsinput>
-      {{ environment_data.environment_id() }}
+      {{ EnvRoleInput(environment_data, member_role_id) }}
       <hr>
     {% endfor %}
   </div>

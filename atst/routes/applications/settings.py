@@ -67,6 +67,7 @@ def filter_env_roles_data(roles):
 
 
 def filter_env_roles_form_data(member, environments):
+    # this can probably get fixed if we implement the soft delete
     env_roles_form_data = []
     for env in environments:
         env_data = {
@@ -368,7 +369,41 @@ def remove_member(application_id, application_role_id):
 @user_can(Permissions.EDIT_APPLICATION_MEMBER, message="update application member")
 def update_member(application_id, application_role_id):
     app_role = ApplicationRoles.get_by_id(application_role_id)
-    form = UpdateMemberForm(http_request.form)
+    application = Applications.get(application_id)
+    existing_env_roles_data = filter_env_roles_form_data(
+        app_role, application.environments
+    )
+    # need to pass in data dict w/ existing data
+    form = UpdateMemberForm(formdata=http_request.form, environment_roles=existing_env_roles_data)
+    # how data comes through in form:
+    # {
+    #     'perms_env_mgmt': False,
+    #     'perms_team_mgmt': True,
+    #     'perms_del_env': False,
+    #     'environment_roles': [
+    #         {
+    #             'environment_id': 'dff3e080-aa08-46e3-8556-06bf60c1eae8',
+    #             'environment_name': 'dev',
+    #             'role': 'Basic Access',
+    #             'deleted': False
+    #         }, {
+    #             'environment_id': 'dc0c4cea-891c-4d77-993c-4f8cd581e47c',
+    #             'environment_name': 'staging',
+    #             'role': None, 'deleted': False
+    #         }, {
+    #             'environment_id': '1326c748-b9eb-4889-be49-8a724fa49855',
+    #             'environment_name': 'test',
+    #             'role': 'Network Admin',
+    #             'deleted': True
+    #         }, {
+    #             'environment_id': 'aa6d3d9e-d65b-4104-8bb9-94461c9f0bee',
+    #             'environment_name': 'production',
+    #             'role': None,
+    #             'deleted': False
+    #         }
+    #     ],
+    #     'permission_sets': ['edit_application_team']
+    # }
 
     if form.validate():
         ApplicationRoles.update_permission_sets(app_role, form.data["permission_sets"])
