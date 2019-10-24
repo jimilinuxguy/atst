@@ -28,6 +28,7 @@ class EnvironmentRoles(object):
                 EnvironmentRole.application_role_id == application_role_id,
                 EnvironmentRole.environment_id == environment_id,
                 EnvironmentRole.deleted == False,
+                EnvironmentRole.status != EnvironmentRole.Status.PENDING_DELETE,
             )
             .one_or_none()
         )

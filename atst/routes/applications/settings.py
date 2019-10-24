@@ -73,6 +73,7 @@ def filter_env_roles_form_data(member, environments):
             "environment_id": str(env.id),
             "environment_name": env.name,
             "role": NO_ACCESS,
+            "deleted": env.deleted,
         }
         env_roles_set = set(env.roles).intersection(set(member.environment_roles))
         if len(env_roles_set) == 1:

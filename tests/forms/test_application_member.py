@@ -10,6 +10,7 @@ def test_environment_form():
         "environment_id": 123,
         "environment_name": "testing",
         "role": ENV_ROLES[0][0],
+        "deleted": True,
     }
     form = EnvironmentForm(data=form_data)
     assert form.validate()
@@ -24,6 +25,7 @@ def test_environment_form_default_no_access():
         "environment_id": 123,
         "environment_name": "testing",
         "role": None,
+        "deleted": False,
     }
 
 
